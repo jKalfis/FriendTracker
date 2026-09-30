@@ -126,8 +126,7 @@ end)
 -- Slash Commands
 --------------------------------------------------
 
-SLASH_FRIENDTRACKER1 = "/friends"
-SLASH_FRIENDTRACKER2 = "/ofriends"
+SLASH_FRIENDTRACKER1 = "/ofriends"
 
 SlashCmdList["FRIENDTRACKER"] = function()
 

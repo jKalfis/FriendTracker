@@ -1,0 +1,7 @@
+## Interface: 11200
+## Title: Friend Tracker
+## Notes: Shows online friends and locations
+## Author: jKalfis
+## Version: 1.0
+
+FriendTracker.lua

@@ -1,7 +1,14 @@
+local addonName = "FriendTracker"
+
+--------------------------------------------------
+-- Main Frame
+--------------------------------------------------
+
 local frame = CreateFrame("Frame", "FriendTrackerFrame", UIParent)
-frame:SetWidth(250)
-frame:SetHeight(300)
-frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+
+frame:SetWidth(270)
+frame:SetHeight(220)
+frame:SetPoint("CENTER", UIParent, "CENTER", 300, 0)
 
 frame:SetBackdrop({
     bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -9,82 +16,133 @@ frame:SetBackdrop({
     tile = true,
     tileSize = 16,
     edgeSize = 16,
-    insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    insets = {
+        left = 5,
+        right = 5,
+        top = 5,
+        bottom = 5
+    }
 })
 
-frame:SetBackdropColor(0, 0, 0, 0.8)
+frame:SetBackdropColor(0, 0, 0, 0.85)
 frame:EnableMouse(true)
 frame:SetMovable(true)
 frame:RegisterForDrag("LeftButton")
-frame:SetScript("OnDragStart", frame.StartMoving)
-frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+frame:SetScript("OnDragStart", function()
+    this:StartMoving()
+end)
 
-local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-title:SetPoint("TOP", 0, -10)
+frame:SetScript("OnDragStop", function()
+    this:StopMovingOrSizing()
+end)
+
+--------------------------------------------------
+-- Title
+--------------------------------------------------
+
+local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+title:SetPoint("TOP", 0, -12)
 title:SetText("Online Friends")
+
+--------------------------------------------------
+-- Friend Lines
+--------------------------------------------------
 
 local rows = {}
 
-local function UpdateFriends()
+for i = 1, 20 do
+    local row = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row:SetPoint("TOPLEFT", 10, -35 - ((i - 1) * 12))
+    row:SetJustifyH("LEFT")
+    row:SetWidth(245)
+    row:SetText("")
+    rows[i] = row
+end
+
+--------------------------------------------------
+-- Update Function
+--------------------------------------------------
+
+local function UpdateFriendList()
+
     ShowFriends()
 
-    local count = GetNumFriends()
+    local numFriends = GetNumFriends()
 
-    for i = 1, table.getn(rows) do
-        rowsHide()
+    for i = 1, 20 do
+        rowsSetText("")
     end
 
-    for i = 1, count do
-        local name, level, class, area, connected =
-            GetFriendInfo(i)
+    local line = 1
 
-        if connected then
-            if not rows[i] then
-                rows[i] = frame:CreateFontString(nil,
-                    "OVERLAY",
-                    "GameFontHighlightSmall")
-            end
+    for i = 1, numFriends do
 
-            rowsSetPoint("TOPLEFT",
-                10,
-                -30 - ((i - 1) * 15))
+        local name, level, class, zone, online = GetFriendInfo(i)
+
+        if online and line <= 20 then
+
+            name = name or "Unknown"
+            level = level or "?"
+            class = class or "?"
+            zone = zone or "Unknown"
 
             rowsSetText(
-                name ..
-                " | Lv" .. level ..
-                " | " .. class ..
-                " | " .. area
+                string.format(
+                    "%s (%s %s) - %s",
+                    name,
+                    level,
+                    class,
+                    zone
+                )
             )
 
-            rowsShow()
+            line = line + 1
         end
     end
+
+    if line == 1 then
+        rowsSetText("No friends online")
+    end
 end
 
-frame:RegisterEvent("FRIENDLIST_UPDATE")
+--------------------------------------------------
+-- Events
+--------------------------------------------------
+
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frame:RegisterEvent("FRIENDLIST_UPDATE")
 
 frame:SetScript("OnEvent", function()
-    UpdateFriends()
-end)
 
-local timer = 0
-frame:SetScript("OnUpdate", function()
-    timer = timer + arg1
-
-    if timer > 30 then
+    if event == "PLAYER_ENTERING_WORLD" then
         ShowFriends()
-        timer = 0
     end
+
+    UpdateFriendList()
+
 end)
 
-SLASH_FRIENDTRACKER1 = "/ft"
+--------------------------------------------------
+-- Slash Commands
+--------------------------------------------------
+
+SLASH_FRIENDTRACKER1 = "/friends"
+SLASH_FRIENDTRACKER2 = "/ofriends"
 
 SlashCmdList["FRIENDTRACKER"] = function()
-    if frame:IsShown() then
-        frame:Hide()
+
+    if FriendTrackerFrame:IsShown() then
+        FriendTrackerFrame:Hide()
     else
-        frame:Show()
-        UpdateFriends()
+        FriendTrackerFrame:Show()
+        UpdateFriendList()
     end
+
 end
+
+--------------------------------------------------
+-- Initial Update
+--------------------------------------------------
+
+frame:Show()
+UpdateFriendList()

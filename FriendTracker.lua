@@ -1,7 +1,7 @@
 local frame = CreateFrame("Frame", "FriendTrackerFrame", UIParent)
 
-frame:SetWidth(280)
-frame:SetHeight(220)
+frame:SetWidth(300)
+frame:SetHeight(250)
 frame:SetPoint("CENTER", UIParent, "CENTER", 300, 0)
 
 frame:SetBackdrop({
@@ -20,6 +20,18 @@ frame:SetBackdrop({
 
 frame:SetBackdropColor(0, 0, 0, 0.85)
 
+frame:EnableMouse(true)
+frame:SetMovable(true)
+frame:RegisterForDrag("LeftButton")
+
+frame:SetScript("OnDragStart", function()
+    this:StartMoving()
+end)
+
+frame:SetScript("OnDragStop", function()
+    this:StopMovingOrSizing()
+end)
+
 local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", 0, -12)
 title:SetText("Online Friends")
@@ -29,36 +41,45 @@ local rows = {}
 for i = 1, 15 do
     rows[i] = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     rowsSetPoint("TOPLEFT", 10, -35 - ((i - 1) * 14))
-    rowsSetWidth(260)
+    rowsSetWidth(280)
     rowsSetJustifyH("LEFT")
     rowsSetText("")
 end
 
-local function UpdateFriends()
+local function UpdateFriendList()
 
-    if ShowFriends then
-        ShowFriends()
-    end
+    ShowFriends()
 
-    local numFriends = GetNumFriends() or 0
+    local count = GetNumFriends() or 0
 
     for i = 1, 15 do
         rowsSetText("")
     end
 
-    if numFriends == 0 then
-        rowsSetText("No friends found")
-        return
+    local line = 1
+
+    for i = 1, count do
+
+        local name, level, class, zone, online = GetFriendInfo(i)
+
+        if online and line <= 15 then
+
+            rowsSetText(
+                name ..
+                " (" ..
+                level ..
+                " " ..
+                class ..
+                ") - " ..
+                zone
+            )
+
+            line = line + 1
+        end
     end
 
-    for i = 1, numFriends do
-
-        local friendData = { GetFriendInfo(i) }
-
-        rowsSetText(
-            tostring(friendData[1] or ("Friend "..i))
-        )
-
+    if line == 1 then
+        rowsSetText("No friends online")
     end
 end
 
@@ -66,7 +87,7 @@ frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("FRIENDLIST_UPDATE")
 
 frame:SetScript("OnEvent", function()
-    UpdateFriends()
+    UpdateFriendList()
 end)
 
 SLASH_FRIENDTRACKER1 = "/ofriends"
@@ -77,10 +98,9 @@ SlashCmdList["FRIENDTRACKER"] = function()
         frame:Hide()
     else
         frame:Show()
-        UpdateFriends()
+        UpdateFriendList()
     end
 
 end
 
-frame:Show()
-UpdateFriends()
+frame:Hide()

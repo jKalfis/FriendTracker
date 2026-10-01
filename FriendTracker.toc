@@ -2,6 +2,6 @@
 ## Title: Friend Tracker
 ## Notes: Displays online friends and their locations.
 ## Author: jKalfis
-## Version: 1.1
+## Version: 1.0
 
 FriendTracker.lua

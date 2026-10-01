@@ -115,3 +115,30 @@ end
 
 frame:Show()
 UpdateFriendList()
+
+SLASH_FRIENDDEBUG1 = "/fdebug"
+
+SlashCmdList["FRIENDDEBUG"] = function()
+
+    ShowFriends()
+
+    local numFriends = GetNumFriends()
+
+    DEFAULT_CHAT_FRAME:AddMessage("Friends: "..numFriends)
+
+    for i = 1, numFriends do
+        local a,b,c,d,e,f,g,h = GetFriendInfo(i)
+
+        DEFAULT_CHAT_FRAME:AddMessage(
+            i..": "
+            ..tostring(a).." | "
+            ..tostring(b).." | "
+            ..tostring(c).." | "
+            ..tostring(d).." | "
+            ..tostring(e).." | "
+            ..tostring(f).." | "
+            ..tostring(g).." | "
+            ..tostring(h)
+        )
+    end
+end

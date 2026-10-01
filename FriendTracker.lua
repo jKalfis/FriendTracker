@@ -1,31 +1,54 @@
--- Janela principal para Vanilla 1.12.1 (Lua 5.0)
+-- FriendTracker for Vanilla 1.12.1 (Lua 5.0)
+
+-- Main Frame
 local frame = CreateFrame("Frame", "FriendTrackerMainFrame", UIParent)
 frame:SetWidth(300)
 frame:SetHeight(380)
 frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 frame:SetMovable(true)
 frame:SetResizable(true)
-frame:SetMinResize(200, 150)
+frame:SetMinResize(180, 120)
 frame:SetMaxResize(600, 800)
 frame:EnableMouse(true)
 frame:RegisterForDrag("LeftButton")
-
--- Arrastar janela
-frame:SetScript("OnDragStart", function() this:StartMoving() end)
-frame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
 frame:Hide()
 
--- Estilo pfUI: Fundo preto semi-translúcido com borda fina plana
+-- Função para guardar tamanho e posição da janela
+local function SavePositionAndSize()
+    if not FriendTrackerDB then FriendTrackerDB = {} end
+    FriendTrackerDB.width = frame:GetWidth()
+    FriendTrackerDB.height = frame:GetHeight()
+    
+    local cX, cY = frame:GetCenter()
+    local uX, uY = UIParent:GetCenter()
+    if cX and cY and uX and uY then
+        FriendTrackerDB.x = cX - uX
+        FriendTrackerDB.y = cY - uY
+    end
+end
+
+-- Arrastar a janela
+frame:SetScript("OnDragStart", function()
+    if not (FriendTrackerDB and FriendTrackerDB.locked) then
+        this:StartMoving()
+    end
+end)
+frame:SetScript("OnDragStop", function()
+    this:StopMovingOrSizing()
+    SavePositionAndSize()
+end)
+
+-- Estilo pfUI (Fundo escuro semi-translúcido com borda fina)
 frame:SetBackdrop({
     bgFile = "Interface\\Buttons\\WHITE8X8",
     edgeFile = "Interface\\Buttons\\WHITE8X8",
     tile = false, tileSize = 0, edgeSize = 1,
     insets = { left = 0, right = 0, top = 0, bottom = 0 }
 })
-frame:SetBackdropColor(0, 0, 0, 0.75)         -- Fundo preto com 75% de opacidade
-frame:SetBackdropBorderColor(0.2, 0.2, 0.2, 1) -- Borda fina cinza escuro
+frame:SetBackdropColor(0, 0, 0, 0.75)
+frame:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
 
--- Botão de Fechar estilo pfUI (Quadrado escuro com 'x' vermelho)
+-- Botão fechar estilo pfUI (Borda preta pura)
 local closeBtn = CreateFrame("Button", nil, frame)
 closeBtn:SetWidth(16)
 closeBtn:SetHeight(16)
@@ -37,7 +60,7 @@ closeBtn:SetBackdrop({
     insets = { left = 0, right = 0, top = 0, bottom = 0 }
 })
 closeBtn:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-closeBtn:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+closeBtn:SetBackdropBorderColor(0, 0, 0, 1) -- Borda preta pura
 
 local closeText = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 closeText:SetPoint("CENTER", closeBtn, "CENTER", 0, 1)
@@ -51,10 +74,10 @@ closeBtn:SetScript("OnEnter", function()
     this:SetBackdropBorderColor(0.8, 0.2, 0.2, 1)
 end)
 closeBtn:SetScript("OnLeave", function()
-    this:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+    this:SetBackdropBorderColor(0, 0, 0, 1)
 end)
 
--- Ícone/Pega para redimensionar (Canto inferior direito)
+-- Pega para redimensionar (Canto inferior direito)
 local resizeBtn = CreateFrame("Button", nil, frame)
 resizeBtn:SetWidth(12)
 resizeBtn:SetHeight(12)
@@ -64,37 +87,67 @@ resizeBtn:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highl
 resizeBtn:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
 
 resizeBtn:SetScript("OnMouseDown", function()
-    this:GetParent():StartSizing("BOTTOMRIGHT")
+    if not (FriendTrackerDB and FriendTrackerDB.locked) then
+        this:GetParent():StartSizing("BOTTOMRIGHT")
+    end
 end)
 resizeBtn:SetScript("OnMouseUp", function()
     this:GetParent():StopMovingOrSizing()
+    SavePositionAndSize()
 end)
 
--- Título em Dourado e maior
+-- Aplicar estado de bloqueio
+local function ApplyLockState()
+    if not FriendTrackerDB then return end
+    if FriendTrackerDB.locked then
+        resizeBtn:Hide()
+    else
+        resizeBtn:Show()
+    end
+end
+
+-- Título a dourado
 local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 title:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -8)
 title:SetFont("Fonts\\FRIZQT__.TTF", 13, "OUTLINE")
 title:SetText("Online Friends")
-title:SetTextColor(1, 0.82, 0, 1) -- Cor Dourada do WoW
+title:SetTextColor(1, 0.82, 0, 1)
 
--- ScrollFrame para suportar a lista
-local scrollFrame = CreateFrame("ScrollFrame", "FriendTrackerScrollFrame", frame, "UIPanelScrollFrameTemplate")
+-- ScrollFrame sem a barra metálica feia
+local scrollFrame = CreateFrame("ScrollFrame", "FriendTrackerScrollFrame", frame)
 scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -32)
-scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 10)
+scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 10)
 
 local content = CreateFrame("Frame", nil, scrollFrame)
-content:SetWidth(240)
+content:SetWidth(280)
 content:SetHeight(1)
 scrollFrame:SetScrollChild(content)
 
--- Ajustar a largura do conteúdo ao redimensionar a janela
+-- Ajustar a largura do conteúdo dinamicamente ao redimensionar
 frame:SetScript("OnSizeChanged", function()
-    if scrollFrame then
-        content:SetWidth(scrollFrame:GetWidth() - 10)
+    if scrollFrame and content then
+        content:SetWidth(scrollFrame:GetWidth())
     end
 end)
 
--- Linhas da lista de amigos
+-- Suporte para scroll com a roda do rato (Mouse Wheel)
+local function OnScrollWheel()
+    local current = scrollFrame:GetVerticalScroll()
+    local maxScroll = scrollFrame:GetVerticalScrollRange()
+    local step = 20
+    if arg1 > 0 then
+        scrollFrame:SetVerticalScroll(math.max(0, current - step))
+    elseif arg1 < 0 then
+        scrollFrame:SetVerticalScroll(math.min(maxScroll, current + step))
+    end
+end
+
+frame:EnableMouseWheel(true)
+frame:SetScript("OnMouseWheel", OnScrollWheel)
+scrollFrame:EnableMouseWheel(true)
+scrollFrame:SetScript("OnMouseWheel", OnScrollWheel)
+
+-- Gestão das linhas de amigos
 local friendRows = {}
 
 local function GetOrCreateRow(index)
@@ -107,7 +160,7 @@ local function GetOrCreateRow(index)
     return friendRows[index]
 end
 
--- Atualização da lista de amigos
+-- Atualizar lista de amigos
 local function UpdateFriendList()
     if not frame:IsShown() then return end
 
@@ -116,7 +169,6 @@ local function UpdateFriendList()
     local numFriends = GetNumFriends()
     local onlineCount = 0
 
-    -- Esconder linhas anteriores
     for _, row in ipairs(friendRows) do
         row:Hide()
     end
@@ -132,7 +184,6 @@ local function UpdateFriendList()
             local areaStr = (area and area ~= "") and area or "Unknown Zone"
             local levelStr = level and ("[" .. level .. "]") or ""
 
-            -- Formatação: [Nível] Nome - Zona
             row:SetText(string.format("%s |cffffffff%s|r - |cff00ff00%s|r", levelStr, nameStr, areaStr))
             row:Show()
         end
@@ -147,12 +198,35 @@ local function UpdateFriendList()
     end
 end
 
--- Registar eventos
+-- Eventos
+frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("FRIENDLIST_UPDATE")
 frame:RegisterEvent("PLAYER_LOGIN")
 
 frame:SetScript("OnEvent", function()
-    if event == "PLAYER_LOGIN" or event == "FRIENDLIST_UPDATE" then
+    if event == "ADDON_LOADED" and arg1 == "FriendTracker" then
+        if not FriendTrackerDB then
+            FriendTrackerDB = {
+                x = 0,
+                y = 0,
+                width = 300,
+                height = 380,
+                locked = false
+            }
+        end
+
+        if FriendTrackerDB.width and FriendTrackerDB.height then
+            frame:SetWidth(FriendTrackerDB.width)
+            frame:SetHeight(FriendTrackerDB.height)
+        end
+
+        if FriendTrackerDB.x and FriendTrackerDB.y then
+            frame:ClearAllPoints()
+            frame:SetPoint("CENTER", UIParent, "CENTER", FriendTrackerDB.x, FriendTrackerDB.y)
+        end
+
+        ApplyLockState()
+    elseif event == "PLAYER_LOGIN" or event == "FRIENDLIST_UPDATE" then
         UpdateFriendList()
     end
 end)
@@ -162,12 +236,28 @@ frame:SetScript("OnShow", function()
     UpdateFriendList()
 end)
 
--- Comandos no Chat (/ft ou /friendtracker)
+-- Slash Command (/ofriends)
 SLASH_FRIENDTRACKER1 = "/ofriends"
-SlashCmdList["FRIENDTRACKER"] = function()
-    if frame:IsShown() then
-        frame:Hide()
+SlashCmdList["FRIENDTRACKER"] = function(msg)
+    local cmd = string.lower(string.gsub(msg or "", "^%s*(.-)%s*$", "%1"))
+    if cmd == "lock" then
+        FriendTrackerDB.locked = true
+        ApplyLockState()
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffd100FriendTracker|r: Window position locked.")
+    elseif cmd == "unlock" then
+        FriendTrackerDB.locked = false
+        ApplyLockState()
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffd100FriendTracker|r: Window position unlocked.")
+    elseif cmd == "help" then
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffd100FriendTracker Commands:|r")
+        DEFAULT_CHAT_FRAME:AddMessage(" - |cffffffff/ofriends|r: Toggle window")
+        DEFAULT_CHAT_FRAME:AddMessage(" - |cffffffff/ofriends lock|r: Lock position & size")
+        DEFAULT_CHAT_FRAME:AddMessage(" - |cffffffff/ofriends unlock|r: Unlock position & size")
     else
-        frame:Show()
+        if frame:IsShown() then
+            frame:Hide()
+        else
+            frame:Show()
+        end
     end
 end

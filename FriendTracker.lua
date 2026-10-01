@@ -1,45 +1,100 @@
--- Create main frame for Vanilla 1.12.1 (Lua 5.0)
+-- Janela principal para Vanilla 1.12.1 (Lua 5.0)
 local frame = CreateFrame("Frame", "FriendTrackerMainFrame", UIParent)
 frame:SetWidth(300)
 frame:SetHeight(380)
 frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 frame:SetMovable(true)
+frame:SetResizable(true)
+frame:SetMinResize(200, 150)
+frame:SetMaxResize(600, 800)
 frame:EnableMouse(true)
 frame:RegisterForDrag("LeftButton")
 
--- 1.12.1 uses global "this" inside frame scripts
+-- Arrastar janela
 frame:SetScript("OnDragStart", function() this:StartMoving() end)
 frame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
 frame:Hide()
 
--- Classic dialog backdrop style
+-- Estilo pfUI: Fundo preto semi-translúcido com borda fina plana
 frame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 }
+    bgFile = "Interface\\Buttons\\WHITE8X8",
+    edgeFile = "Interface\\Buttons\\WHITE8X8",
+    tile = false, tileSize = 0, edgeSize = 1,
+    insets = { left = 0, right = 0, top = 0, bottom = 0 }
 })
+frame:SetBackdropColor(0, 0, 0, 0.75)         -- Fundo preto com 75% de opacidade
+frame:SetBackdropBorderColor(0.2, 0.2, 0.2, 1) -- Borda fina cinza escuro
 
--- Close Button
-local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+-- Botão de Fechar estilo pfUI (Quadrado escuro com 'x' vermelho)
+local closeBtn = CreateFrame("Button", nil, frame)
+closeBtn:SetWidth(16)
+closeBtn:SetHeight(16)
 closeBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
+closeBtn:SetBackdrop({
+    bgFile = "Interface\\Buttons\\WHITE8X8",
+    edgeFile = "Interface\\Buttons\\WHITE8X8",
+    tile = false, tileSize = 0, edgeSize = 1,
+    insets = { left = 0, right = 0, top = 0, bottom = 0 }
+})
+closeBtn:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+closeBtn:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
 
--- Title
-local title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-title:SetPoint("TOP", frame, "TOP", 0, -15)
-title:SetText("FriendTracker - Online Friends")
+local closeText = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+closeText:SetPoint("CENTER", closeBtn, "CENTER", 0, 1)
+closeText:SetText("x")
+closeText:SetTextColor(0.8, 0.2, 0.2, 1)
 
--- ScrollFrame for friends list
+closeBtn:SetScript("OnClick", function()
+    this:GetParent():Hide()
+end)
+closeBtn:SetScript("OnEnter", function()
+    this:SetBackdropBorderColor(0.8, 0.2, 0.2, 1)
+end)
+closeBtn:SetScript("OnLeave", function()
+    this:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+end)
+
+-- Ícone/Pega para redimensionar (Canto inferior direito)
+local resizeBtn = CreateFrame("Button", nil, frame)
+resizeBtn:SetWidth(12)
+resizeBtn:SetHeight(12)
+resizeBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
+resizeBtn:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+resizeBtn:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+resizeBtn:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+
+resizeBtn:SetScript("OnMouseDown", function()
+    this:GetParent():StartSizing("BOTTOMRIGHT")
+end)
+resizeBtn:SetScript("OnMouseUp", function()
+    this:GetParent():StopMovingOrSizing()
+end)
+
+-- Título em Dourado e maior
+local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+title:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -8)
+title:SetFont("Fonts\\FRIZQT__.TTF", 13, "OUTLINE")
+title:SetText("Online Friends")
+title:SetTextColor(1, 0.82, 0, 1) -- Cor Dourada do WoW
+
+-- ScrollFrame para suportar a lista
 local scrollFrame = CreateFrame("ScrollFrame", "FriendTrackerScrollFrame", frame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, -40)
-scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -35, 15)
+scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -32)
+scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 10)
 
 local content = CreateFrame("Frame", nil, scrollFrame)
 content:SetWidth(240)
 content:SetHeight(1)
 scrollFrame:SetScrollChild(content)
 
--- Text row storage
+-- Ajustar a largura do conteúdo ao redimensionar a janela
+frame:SetScript("OnSizeChanged", function()
+    if scrollFrame then
+        content:SetWidth(scrollFrame:GetWidth() - 10)
+    end
+end)
+
+-- Linhas da lista de amigos
 local friendRows = {}
 
 local function GetOrCreateRow(index)
@@ -52,22 +107,21 @@ local function GetOrCreateRow(index)
     return friendRows[index]
 end
 
--- Main update function
+-- Atualização da lista de amigos
 local function UpdateFriendList()
     if not frame:IsShown() then return end
 
-    ShowFriends() -- Request friend list update from 1.12.1 server
+    ShowFriends()
 
     local numFriends = GetNumFriends()
     local onlineCount = 0
 
-    -- Hide existing rows
+    -- Esconder linhas anteriores
     for _, row in ipairs(friendRows) do
         row:Hide()
     end
 
     for i = 1, numFriends do
-        -- 1.12.1 API returns: name, level, class, area, connected, status
         local name, level, class, area, connected, status = GetFriendInfo(i)
 
         if connected then
@@ -78,7 +132,7 @@ local function UpdateFriendList()
             local areaStr = (area and area ~= "") and area or "Unknown Zone"
             local levelStr = level and ("[" .. level .. "]") or ""
 
-            -- Format: [Level] Name - Zone
+            -- Formatação: [Nível] Nome - Zona
             row:SetText(string.format("%s |cffffffff%s|r - |cff00ff00%s|r", levelStr, nameStr, areaStr))
             row:Show()
         end
@@ -93,7 +147,7 @@ local function UpdateFriendList()
     end
 end
 
--- Event registration (1.12.1 uses global "event")
+-- Registar eventos
 frame:RegisterEvent("FRIENDLIST_UPDATE")
 frame:RegisterEvent("PLAYER_LOGIN")
 
@@ -108,7 +162,7 @@ frame:SetScript("OnShow", function()
     UpdateFriendList()
 end)
 
--- Slash commands (/ft or /friendtracker)
+-- Comandos no Chat (/ft ou /friendtracker)
 SLASH_FRIENDTRACKER1 = "/ft"
 SLASH_FRIENDTRACKER2 = "/friendtracker"
 SlashCmdList["FRIENDTRACKER"] = function()

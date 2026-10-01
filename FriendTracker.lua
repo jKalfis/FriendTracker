@@ -1,9 +1,3 @@
-local addonName = "FriendTracker"
-
---------------------------------------------------
--- Main Frame
---------------------------------------------------
-
 local frame = CreateFrame("Frame", "FriendTrackerFrame", UIParent)
 
 frame:SetWidth(270)
@@ -25,9 +19,11 @@ frame:SetBackdrop({
 })
 
 frame:SetBackdropColor(0, 0, 0, 0.85)
+
 frame:EnableMouse(true)
 frame:SetMovable(true)
 frame:RegisterForDrag("LeftButton")
+
 frame:SetScript("OnDragStart", function()
     this:StartMoving()
 end)
@@ -36,38 +32,27 @@ frame:SetScript("OnDragStop", function()
     this:StopMovingOrSizing()
 end)
 
---------------------------------------------------
--- Title
---------------------------------------------------
-
 local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", 0, -12)
 title:SetText("Online Friends")
 
---------------------------------------------------
--- Friend Lines
---------------------------------------------------
-
 local rows = {}
 
 for i = 1, 20 do
-    local row = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    row:SetPoint("TOPLEFT", 10, -35 - ((i - 1) * 12))
-    row:SetJustifyH("LEFT")
-    row:SetWidth(245)
-    row:SetText("")
-    rows[i] = row
+    rows[i] = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    rowsSetPoint("TOPLEFT", 10, -35 - ((i - 1) * 12))
+    rowsSetWidth(245)
+    rowsSetJustifyH("LEFT")
+    rowsSetText("")
 end
-
---------------------------------------------------
--- Update Function
---------------------------------------------------
 
 local function UpdateFriendList()
 
-    ShowFriends()
+    if ShowFriends then
+        ShowFriends()
+    end
 
-    local numFriends = GetNumFriends()
+    local numFriends = GetNumFriends() or 0
 
     for i = 1, 20 do
         rowsSetText("")
@@ -81,18 +66,13 @@ local function UpdateFriendList()
 
         if online and line <= 20 then
 
-            name = name or "Unknown"
-            level = level or "?"
-            class = class or "?"
-            zone = zone or "Unknown"
-
             rowsSetText(
                 string.format(
                     "%s (%s %s) - %s",
-                    name,
-                    level,
-                    class,
-                    zone
+                    tostring(name or "?"),
+                    tostring(level or "?"),
+                    tostring(class or "?"),
+                    tostring(zone or "Unknown")
                 )
             )
 
@@ -105,26 +85,20 @@ local function UpdateFriendList()
     end
 end
 
---------------------------------------------------
--- Events
---------------------------------------------------
-
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("FRIENDLIST_UPDATE")
 
 frame:SetScript("OnEvent", function()
 
     if event == "PLAYER_ENTERING_WORLD" then
-        ShowFriends()
+        if ShowFriends then
+            ShowFriends()
+        end
     end
 
     UpdateFriendList()
 
 end)
-
---------------------------------------------------
--- Slash Commands
---------------------------------------------------
 
 SLASH_FRIENDTRACKER1 = "/ofriends"
 
@@ -138,10 +112,6 @@ SlashCmdList["FRIENDTRACKER"] = function()
     end
 
 end
-
---------------------------------------------------
--- Initial Update
---------------------------------------------------
 
 frame:Show()
 UpdateFriendList()

@@ -39,27 +39,23 @@ title:SetText("Online Friends")
 local rows = {}
 
 for i = 1, 15 do
-    local row = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    rows[i] = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 
-    row:SetPoint(
+    rowsSetPoint(
         "TOPLEFT",
         10,
         -35 - ((i - 1) * 14)
     )
 
-    row:SetJustifyH("LEFT")
-    row:SetText("")
-
-    rows[i] = row
+    rowsSetJustifyH("LEFT")
+    rowsSetText("")
 end
 
 local function UpdateFriendList()
 
-    if ShowFriends then
-        ShowFriends()
-    end
+    ShowFriends()
 
-    local numFriends = GetNumFriends() or 0
+    local total = GetNumFriends() or 0
 
     for i = 1, 15 do
         rowsSetText("")
@@ -67,7 +63,7 @@ local function UpdateFriendList()
 
     local line = 1
 
-    for i = 1, numFriends do
+    for i = 1, total do
 
         local name, level, class, zone, online =
             GetFriendInfo(i)

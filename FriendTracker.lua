@@ -41,7 +41,7 @@ local rows = {}
 for i = 1, 15 do
     rows[i] = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 
-    rowsSetPoint(
+    row:SetPoint(
         "TOPLEFT",
         10,
         -35 - ((i - 1) * 14)

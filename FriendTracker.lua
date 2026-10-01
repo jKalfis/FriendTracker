@@ -163,8 +163,7 @@ frame:SetScript("OnShow", function()
 end)
 
 -- Comandos no Chat (/ft ou /friendtracker)
-SLASH_FRIENDTRACKER1 = "/ft"
-SLASH_FRIENDTRACKER2 = "/friendtracker"
+SLASH_FRIENDTRACKER1 = "/ofriends"
 SlashCmdList["FRIENDTRACKER"] = function()
     if frame:IsShown() then
         frame:Hide()

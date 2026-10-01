@@ -10,10 +10,15 @@ frame:SetBackdrop({
     tile = true,
     tileSize = 16,
     edgeSize = 16,
-    insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    insets = {
+        left = 4,
+        right = 4,
+        top = 4,
+        bottom = 4
+    }
 })
 
-frame:SetBackdropColor(0,0,0,0.85)
+frame:SetBackdropColor(0, 0, 0, 0.85)
 
 frame:EnableMouse(true)
 frame:SetMovable(true)
@@ -42,18 +47,19 @@ for i = 1, 15 do
         -35 - ((i - 1) * 14)
     )
 
-    row:SetWidth(300)
     row:SetJustifyH("LEFT")
     row:SetText("")
 
     rows[i] = row
 end
 
-local function UpdateFriends()
+local function UpdateFriendList()
 
-    ShowFriends()
+    if ShowFriends then
+        ShowFriends()
+    end
 
-    local total = GetNumFriends() or 0
+    local numFriends = GetNumFriends() or 0
 
     for i = 1, 15 do
         rowsSetText("")
@@ -61,7 +67,7 @@ local function UpdateFriends()
 
     local line = 1
 
-    for i = 1, total do
+    for i = 1, numFriends do
 
         local name, level, class, zone, online =
             GetFriendInfo(i)
@@ -91,7 +97,7 @@ frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("FRIENDLIST_UPDATE")
 
 frame:SetScript("OnEvent", function()
-    UpdateFriends()
+    UpdateFriendList()
 end)
 
 SLASH_FRIENDTRACKER1 = "/ofriends"
@@ -102,7 +108,7 @@ SlashCmdList["FRIENDTRACKER"] = function()
         frame:Hide()
     else
         frame:Show()
-        UpdateFriends()
+        UpdateFriendList()
     end
 
 end

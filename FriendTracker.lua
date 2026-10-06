@@ -90,11 +90,17 @@ closeBtn:SetScript("OnLeave", function()
     this:SetBackdropBorderColor(0, 0, 0, 1)
 end)
 
--- Menu de Contexto (Apenas Whisper e Invite)
+-- Invisible Catcher Frame para fechar o menu ao clicar fora (Padrão pfUI)
+local contextCatcher = CreateFrame("Button", nil, UIParent)
+contextCatcher:SetAllPoints(UIParent)
+contextCatcher:SetFrameStrata("FULLSCREEN")
+contextCatcher:Hide()
+
+-- Menu de Contexto (Whisper e Invite)
 local contextMenu = CreateFrame("Frame", "FriendTrackerContextMenu", UIParent)
 contextMenu:SetWidth(120)
 contextMenu:SetHeight(44)
-contextMenu:SetFrameStrata("TOOLTIP")
+contextMenu:SetFrameStrata("FULLSCREEN_DIALOG")
 contextMenu:Hide()
 contextMenu:SetBackdrop({
     bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -106,6 +112,15 @@ contextMenu:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
 contextMenu:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
 
 local activeFriendName = nil
+
+local function HideContextMenu()
+    contextMenu:Hide()
+    contextCatcher:Hide()
+end
+
+contextCatcher:SetScript("OnClick", function()
+    HideContextMenu()
+end)
 
 local function CreateMenuButton(parent, label, yOffset, onClickFunc)
     local btn = CreateFrame("Button", nil, parent)
@@ -127,7 +142,7 @@ local function CreateMenuButton(parent, label, yOffset, onClickFunc)
     end)
     btn:SetScript("OnClick", function()
         onClickFunc()
-        contextMenu:Hide()
+        HideContextMenu()
     end)
     return btn
 end
@@ -145,6 +160,7 @@ local function ShowContextMenu(name)
     local scale = UIParent:GetEffectiveScale()
     contextMenu:ClearAllPoints()
     contextMenu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / scale, y / scale)
+    contextCatcher:Show()
     contextMenu:Show()
 end
 
@@ -199,7 +215,7 @@ frame:SetScript("OnSizeChanged", function()
     end
 end)
 
--- Suporte para scroll com a roda do rato
+-- Scroll com roda do rato
 local function OnScrollWheel()
     local current = scrollFrame:GetVerticalScroll()
     local maxScroll = scrollFrame:GetVerticalScrollRange()
@@ -209,7 +225,7 @@ local function OnScrollWheel()
     elseif arg1 < 0 then
         scrollFrame:SetVerticalScroll(math.min(maxScroll, current + step))
     end
-    contextMenu:Hide()
+    HideContextMenu()
 end
 
 frame:EnableMouseWheel(true)
@@ -217,19 +233,17 @@ frame:SetScript("OnMouseWheel", OnScrollWheel)
 scrollFrame:EnableMouseWheel(true)
 scrollFrame:SetScript("OnMouseWheel", OnScrollWheel)
 
--- Linhas de amigos com Hitbox e Hover melhorados
+-- Linhas de amigos
 local friendRows = {}
 
 local function GetOrCreateRow(index)
     if not friendRows[index] then
-        local row = CreateFrame("Button", nil, content)
+        local row = CreateFrame("Frame", nil, content)
         row:SetHeight(18)
         row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * 18)
         row:SetPoint("RIGHT", content, "RIGHT", 0, 0)
         row:EnableMouse(true)
-        row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
-        -- Textura invisível para capturar o clique na linha inteira
         row:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             tile = false, tileSize = 0, edgeSize = 0,
@@ -242,10 +256,11 @@ local function GetOrCreateRow(index)
         text:SetJustifyH("LEFT")
         row.text = text
 
-        row:SetScript("OnClick", function()
+        -- Deteção direta de cliques no rato
+        row:SetScript("OnMouseUp", function()
             if not this.friendName then return end
             if arg1 == "LeftButton" then
-                contextMenu:Hide()
+                HideContextMenu()
                 ChatFrame_OpenChat("/w " .. this.friendName .. " ")
             elseif arg1 == "RightButton" then
                 ShowContextMenu(this.friendName)
@@ -254,7 +269,7 @@ local function GetOrCreateRow(index)
 
         row:SetScript("OnEnter", function()
             if this.friendName then
-                this:SetBackdropColor(1, 1, 1, 0.08) -- Efeito hover ao passar o rato
+                this:SetBackdropColor(1, 1, 1, 0.08)
             end
         end)
         row:SetScript("OnLeave", function()
@@ -316,11 +331,6 @@ local function UpdateFriendList()
     end
 end
 
--- Fechar menu ao clicar na janela principal
-frame:SetScript("OnMouseDown", function()
-    contextMenu:Hide()
-end)
-
 -- Eventos
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("FRIENDLIST_UPDATE")
@@ -360,7 +370,7 @@ frame:SetScript("OnShow", function()
 end)
 
 frame:SetScript("OnHide", function()
-    contextMenu:Hide()
+    HideContextMenu()
 end)
 
 -- Slash Command (/ofriends)
